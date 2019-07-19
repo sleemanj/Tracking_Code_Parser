@@ -1,0 +1,127 @@
+<script type="text/javascript">
+  
+  // A sort of a pattern match,
+  //   
+  //  _ (underscore) matches _ and 0-9
+  //  * (asterisk)   matches * and A-Z and 0-9
+  //  ^ (caret)      matches ^ and A-Z
+  //
+  // Matching is case-insensitive
+  // 
+  // If a parenthesis group is used then this denotes the tracking-code portion of a larger barcode read
+  //  eg Fastway has a "D" or "P" suffix on some barcodes to indicate the deliovery or pickup scan
+  //  which we probably don't want to include in the tracking code
+  //
+  // This list is not fully tested, it's just made from some random ones I found in google image searches
+  //
+  
+  var patterns = {
+    "FF_________NZ": "https://www.nzpost.co.nz/tools/tracking/item/[CODE]",
+    "EC1(FF_________NZ)": "https://www.nzpost.co.nz/tools/tracking/item/[CODE]", // Courier Post QR Code
+    "NO_________NZ": "https://www.nzpost.co.nz/tools/tracking/item/[CODE]",
+    "SA_________NZ": "https://www.nzpost.co.nz/tools/tracking/item/[CODE]",
+    "1RBB************": "https://www.passtheparcel.co.nz/Pass/Track/[CODE]",
+    "SI4_______": "http://www.pbt.com/",
+    "NI4_______": "http://www.pbt.com/",
+    "II4_______": "http://www.pbt.com/",
+    "LC4_______": "http://www.pbt.com/",
+    "LH4_______": "http://www.pbt.com/",
+    "ES4_______": "http://www.pbt.com/",
+    "EN4_______": "http://www.pbt.com/",
+    "OA4_______": "http://www.pbt.com/",
+    "_TKA^^__________": "https://www.nzcouriers.co.nz/nzc/servlet/ITNG_TAndTServlet?page=1&VCCA=Enabled&Key_Type=BarCode&barcode_data=[CODE]",
+    "_K_A__________": "https://www.nzcouriers.co.nz/nzc/servlet/ITNG_TAndTServlet?page=1&VCCA=Enabled&Key_Type=BarCode&barcode_data=[CODE]",
+    "_L_A__________": "https://www.nzcouriers.co.nz/nzc/servlet/ITNG_TAndTServlet?page=1&VCCA=Enabled&Key_Type=BarCode&barcode_data=[CODE]",
+    "(_TKA^^__________)__": "https://www.nzcouriers.co.nz/nzc/servlet/ITNG_TAndTServlet?page=1&VCCA=Enabled&Key_Type=BarCode&barcode_data=[CODE]",
+    "(_K_A__________)__": "https://www.nzcouriers.co.nz/nzc/servlet/ITNG_TAndTServlet?page=1&VCCA=Enabled&Key_Type=BarCode&barcode_data=[CODE]",
+    "(_L_A__________)__": "https://www.nzcouriers.co.nz/nzc/servlet/ITNG_TAndTServlet?page=1&VCCA=Enabled&Key_Type=BarCode&barcode_data=[CODE]",
+    "_TKD^^__________": "https://www.castleparcels.co.nz/cpl/servlet/ITNG_TAndTServlet?page=1&VCCA=Enabled&Key_Type=BarCode&barcode_data=[CODE]",
+    "_L_D__________": "https://www.castleparcels.co.nz/cpl/servlet/ITNG_TAndTServlet?page=1&VCCA=Enabled&Key_Type=BarCode&barcode_data=[CODE]",
+    "(_TKD^^__________)__": "https://www.castleparcels.co.nz/cpl/servlet/ITNG_TAndTServlet?page=1&VCCA=Enabled&Key_Type=BarCode&barcode_data=[CODE]",
+    "(_L_D__________)__": "https://www.castleparcels.co.nz/cpl/servlet/ITNG_TAndTServlet?page=1&VCCA=Enabled&Key_Type=BarCode&barcode_data=[CODE]",
+    "_TKB^^__________": "https://www.posthaste.co.nz/nzc/servlet/ITNG_TAndTServlet?page=1&VCCA=Enabled&Key_Type=BarCode&barcode_data=[CODE]",
+    "_TKDPE__________": "https://www.posthaste.co.nz/nzc/servlet/ITNG_TAndTServlet?page=1&VCCA=Enabled&Key_Type=BarCode&barcode_data=[CODE]",
+    "_C_B_________*********___*": "https://www.posthaste.co.nz/nzc/servlet/ITNG_TAndTServlet?page=1&VCCA=Enabled&Key_Type=BarCode&barcode_data=[CODE]",
+    "_K_B__________": "https://www.posthaste.co.nz/nzc/servlet/ITNG_TAndTServlet?page=1&VCCA=Enabled&Key_Type=BarCode&barcode_data=[CODE]",
+    "_L_B__________": "https://www.posthaste.co.nz/nzc/servlet/ITNG_TAndTServlet?page=1&VCCA=Enabled&Key_Type=BarCode&barcode_data=[CODE]",
+    "(_TKB^^__________)__": "https://www.posthaste.co.nz/nzc/servlet/ITNG_TAndTServlet?page=1&VCCA=Enabled&Key_Type=BarCode&barcode_data=[CODE]",
+    "(_K_B__________)__": "https://www.posthaste.co.nz/nzc/servlet/ITNG_TAndTServlet?page=1&VCCA=Enabled&Key_Type=BarCode&barcode_data=[CODE]",
+    "(_L_B__________)__": "https://www.posthaste.co.nz/nzc/servlet/ITNG_TAndTServlet?page=1&VCCA=Enabled&Key_Type=BarCode&barcode_data=[CODE]",
+    "^^00________": "https://fastway.co.nz/tools/track?l=[CODE]",
+    "(^^00________)D": "https://fastway.co.nz/tools/track?l=[CODE]",
+    "(^^00________)P": "https://fastway.co.nz/tools/track?l=[CODE]"
+  };
+
+  // Sort patterns so that the longest patterns are first
+  //  and patterns with more non-wildcard characters are first  
+  var regexp = [ ];
+  Object.keys(patterns).sort(function(a,b){
+    if(a.length > b.length) return -1;
+    if(a.length < b.length) return  1;
+    if(a.replace(/^[0-9A-Z]/i, '').length > b.replace(/^[0-9A-Z]/i, '').length) return -1;
+    if(a.replace(/^[0-9A-Z]/i, '').length < b.replace(/^[0-9A-Z]/i, '').length) return  1;
+    return 0;
+  }).forEach(function(i){
+    var url = patterns[i];
+    
+    // Make the pattern into a real regular expression.  Note the lack of escaping of
+    //  other regexp specials, care to be taken not to use special characters
+    i = i.replace(/_+/g, function(a){ return '[0-9_]{'+(a.length)+','+(a.length)+'}';})
+         .replace(/\*+/g, function(a){ return '[A-Z0-9*]{'+(a.length)+','+(a.length)+'}';})
+         .replace(/\^+/g, function(a){ return '[A-Z*]{'+(a.length)+','+(a.length)+'}';});
+     
+    if(!i.match(/\(.*\)/))
+    {
+      i = '('+i+')';
+    }
+    
+    regexp.push( { expression: new RegExp( '(?:^|[^-A-Z0-9_.])'+i+'(?:[^-A-Z0-9_.]|$)', 'i' ), tracking_url: url } );
+  });
+  
+  // Pass a string of one or more tracking codes separated by newlines or semi-colons
+  //  returns an array of { tracking_code: ..... , tracking_url: ..... }
+  function find_codes(in_string)
+  {
+    var found = [ ];
+    
+    // Newlines become semicolons to separate, spaces get stripped
+    var sanitised = in_string.replace(/\r\n|\r|\n/g, ';').replace(/\s/g, '');
+    
+    regexp.forEach(function(i){
+      while(sanitised.length && sanitised.match(i.expression))
+      {
+        found.push( { tracking_code: RegExp.$1, tracking_url: i.tracking_url.replace('[CODE]', RegExp.$1) });
+        sanitised = sanitised.replace(RegExp.$1, '').replace(/^;+/, '').replace(/;+$/, '');
+      }
+    });
+    
+    return found;
+  }
+  
+  // Silly testing 
+  document.addEventListener('DOMContentLoaded', function(){
+    document.querySelector('textarea').addEventListener('keypress', function(e){
+      if(e.key.toLowerCase() == 'enter')
+      { 
+        e.stopPropagation();
+        var results = find_codes(document.querySelector('textarea').value);
+        
+        document.querySelector('#result').innerHTML = '';
+        results.forEach(function(result){
+          var a = document.createElement('a');
+          a.href = result.tracking_url;
+          a.innerText = result.tracking_code;
+          a.style.display = 'block';
+          document.querySelector('#result').appendChild(a)
+        });
+      }      
+    });
+  });
+</script>
+
+<p>Scan codes, one per line, parses when you hit enter.</p>
+<textarea style="width:50em;height:10em;">
+</textarea>
+
+<div id="result">
+</div>

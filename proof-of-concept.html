@@ -68,7 +68,7 @@
     //  other regexp specials, care to be taken not to use special characters
     i = i.replace(/_+/g, function(a){ return '[0-9_]{'+(a.length)+','+(a.length)+'}';})
          .replace(/\*+/g, function(a){ return '[A-Z0-9*]{'+(a.length)+','+(a.length)+'}';})
-         .replace(/\^+/g, function(a){ return '[A-Z*]{'+(a.length)+','+(a.length)+'}';});
+         .replace(/\^+/g, function(a){ return '[A-Z^]{'+(a.length)+','+(a.length)+'}';});
      
     if(!i.match(/\(.*\)/))
     {
